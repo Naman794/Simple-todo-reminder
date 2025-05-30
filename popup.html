@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Reminder</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="popup-container">
+        <div id="setupSection" class="card">
+            <h1 class="main-title">Welcome!</h1>
+            <p class="subtitle">Let's personalize your experience.</p>
+
+            <form id="setupForm" class="form-layout">
+                <div>
+                    <label for="userName" class="form-label">Your Name <span class="required-asterisk">*</span></label>
+                    <input type="text" id="userName" name="userName" class="input-field" placeholder="E.g., Alex" required>
+                </div>
+
+                <div>
+                    <label for="userEmail" class="form-label">Email (Optional)</label>
+                    <input type="email" id="userEmail" name="userEmail" class="input-field" placeholder="E.g., alex@example.com">
+                    <p class="info-text">Stored locally. Not shared.</p>
+                </div>
+
+                <div>
+                    <label for="userDOB" class="form-label">Date of Birth (Optional)</label>
+                    <input type="date" id="userDOB" name="userDOB" class="input-field" placeholder="mm/dd/yyyy">
+                     <p class="info-text">For an optional birthday greeting!</p>
+                </div>
+
+                <button type="submit" class="btn btn-primary full-width">Save & Continue</button>
+                <p class="small-text centered-text">Your info is stored locally & never shared.</p>
+            </form>
+        </div>
+
+        <div id="mainAppSection" class="main-app-layout hidden">
+            <div class="header-flex card-light">
+                <h2 id="greeting" class="section-title-main no-border">Hey there!</h2>
+                <button id="logoutButton" class="btn-subtle">Reset Setup</button>
+            </div>
+
+            <div id="todoCard" class="card">
+                <h3 class="section-title">My To-Do List</h3>
+                <div>
+                    <label for="todoInput" class="form-label">New To-Do Item:</label>
+                    <div class="input-group">
+                        <input type="text" id="todoInput" class="input-field flex-grow" placeholder="E.g., Buy groceries">
+                        <button id="addTodoButton" class="btn btn-primary">Add Task</button>
+                    </div>
+                </div>
+
+                <div id="todoList" class="todo-list-container">
+                    </div>
+                <button id="clearAllTodosButton" class="btn btn-danger full-width hidden">Clear All To-dos</button>
+            </div>
+
+            <div id="newReminderCard" class="card">
+                <h3 class="section-title">Set a New Reminder</h3>
+                <form id="newReminderForm" class="form-layout">
+                    <div>
+                        <label for="reminderText" class="form-label">Reminder Text:</label>
+                        <input type="text" id="reminderText" class="input-field" placeholder="E.g., Call John" required>
+                    </div>
+                    <div>
+                        <label for="reminderTime" class="form-label">Reminder Time (Today):</label>
+                        <input type="time" id="reminderTime" class="input-field" required>
+                    </div>
+                    <!-- 
+                    <div>
+                        <label for="reminderDate" class="form-label">Reminder Date (Optional, defaults to today):</label>
+                        <input type="date" id="reminderDate" class="input-field">
+                    </div>
+                     -->
+                    <button type="submit" class="btn btn-primary full-width">Set Reminder</button>
+                </form>
+            </div>
+            
+            <div id="upcomingRemindersCard" class="card hidden"> <h3 class="section-title">Upcoming Reminders</h3>
+                <div id="upcomingRemindersList" class="todo-list-container">
+                    <p class="info-text centered-text">No upcoming reminders set.</p>
+                </div>
+            </div>
+
+
+            <div id="settingsSection" class="card">
+                <h3 class="section-title">Voice & Other Settings</h3>
+                <div class="settings-group">
+                    <div>
+                        <label for="voiceSelect" class="form-label">Notification Voice:</label>
+                        <select id="voiceSelect" class="input-field select-field">
+                            </select>
+                    </div>
+                     <div class="checkbox-group" onclick="document.getElementById('enableVoiceGreeting').click()">
+                        <input type="checkbox" id="enableVoiceGreeting" class="checkbox-input">
+                        <label for="enableVoiceGreeting" class="checkbox-label">Enable Voice Greeting (10 AM & Birthday)</label>
+                    </div>
+                    <div class="checkbox-group" onclick="document.getElementById('enableSpokenReminders').click()">
+                        <input type="checkbox" id="enableSpokenReminders" class="checkbox-input" checked>
+                        <label for="enableSpokenReminders" class="checkbox-label">Enable Spoken Reminders (for custom alerts)</label>
+                    </div>
+                    <button id="updateVoiceSettingsButton" class="btn btn-secondary">Update Voice Settings</button>
+                    <p id="settingsStatus" class="status-text-small"></p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="bottomTodoBanner" class="bottom-banner hidden">
+            <p id="bottomTodoBannerText" class="bottom-banner-text"></p>
+            <button id="dismissBottomTodoBannerBtn" class="dismiss-banner-btn">&times;</button>
+        </div>
+
+        <div id="actionFeedbackPopup" class="action-feedback-popup">
+            <span id="actionFeedbackText"></span>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
