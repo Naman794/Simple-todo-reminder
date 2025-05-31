@@ -1,13 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "Daily Voice Reminder",
-  "version": "1.0",
-  "description": "A simple extension to remind you of your to-dos with voice notifications, excluding weekends.",
+  "name": "Daily Voice Reminder & YT Stats",
+  "version": "1.2",
+  "description": "A Chrome extension for to-dos, custom reminders with voice, YouTube channel stats, and Discord logging.",
   "permissions": [
     "storage",
     "alarms",
     "notifications",
-    "tts"
+    "tts",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.googleapis.com/",
+    "https://discord.com/"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -23,9 +29,17 @@
     "128": "icons/icon128.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content_yt.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; object-src 'self';"
+    "extension_pages": "script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googleapis.com/ https://discord.com/; object-src 'self';"
   }
 }
