@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 voiceSelect.appendChild(option);
             });
             chrome.storage.local.get(['voiceName', 'voiceGreetingEnabled', 'spokenRemindersEnabled'], (result) => {
-                voiceSelect.value = result.voiceName || ''; 
+                if(voiceSelect) voiceSelect.value = result.voiceName || ''; 
                 if(enableVoiceGreeting) enableVoiceGreeting.checked = result.voiceGreetingEnabled !== undefined ? result.voiceGreetingEnabled : false;
                 if(enableSpokenReminders) enableSpokenReminders.checked = result.spokenRemindersEnabled !== undefined ? result.spokenRemindersEnabled : true;
             });
@@ -206,10 +206,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lowerText.startsWith("reminder:") && !settings.spokenRemindersEnabled) {
                  if (onEndCallback) onEndCallback(); return;
             }
-            const popupActionKeywords = ["task added", "task deleted", "all tasks cleared", "task marked as done", "task marked as active", "reminder set for", "settings saved", "setup reset", "voice settings updated"];
-            if (popupActionKeywords.some(keyword => lowerText.includes(keyword)) && !settings.spokenRemindersEnabled && !lowerText.startsWith("reminder set for")) { // Allow "reminder set for" to bypass this specific check
+            const popupActionKeywords = ["task added", "task deleted", "all tasks cleared", "task marked as done", "task marked as active", "reminder set for", "settings saved", "setup reset", "voice settings updated", "api key saved"];
+            let isActionKeyword = popupActionKeywords.some(keyword => lowerText.includes(keyword));
+            
+            if (isActionKeyword && !lowerText.startsWith("reminder set for") && !settings.spokenRemindersEnabled) {
                 if (onEndCallback) onEndCallback(); return;
             }
+             if (lowerText.startsWith("reminder set for") && !settings.spokenRemindersEnabled){ // Special check for "reminder set for"
+                if(onEndCallback) onEndCallback(); return;
+            }
+
 
             if (typeof speechSynthesis === 'undefined' || speechSynthesis.speaking) {
                 if (speechSynthesis.speaking) console.warn("Speech synthesis is busy.");
@@ -294,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const deleteButton = document.createElement('button');
                 deleteButton.className = 'delete-btn';
                 deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.177-2.365.298a.75.75 0 0 0-.53.904l.523 4.386A3.75 3.75 0 0 0 7.48 12.5H12.52a3.75 3.75 0 0 0 3.352-2.912l.523-4.386a.75.75 0 0 0-.53-.904c-.785-.12-1.57-.221-2.365-.298v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg>'; 
-                deleteButton.title = "Delete To-Do";
+                deleteButton.title = "Delete Task";
                 deleteButton.onclick = () => deleteTodo(index);
                 actionsWrapper.appendChild(completeButton);
                 actionsWrapper.appendChild(deleteButton);
@@ -367,14 +373,17 @@ document.addEventListener('DOMContentLoaded', () => {
         upcomingRemindersList.innerHTML = '';
         if (!reminders || reminders.length === 0) {
             upcomingRemindersList.innerHTML = '<p class="info-text centered-text">No upcoming reminders set.</p>';
-            upcomingRemindersCard.classList.add('hidden');
+            upcomingRemindersCard.classList.add('hidden'); // Keep card hidden if no reminders
             return;
         }
-        upcomingRemindersCard.classList.remove('hidden');
+        // Only show the card if navigating to it AND there are reminders.
+        // The navigation logic will handle showing the card.
+        // This function just populates if it's meant to be visible.
+        // upcomingRemindersCard.classList.remove('hidden'); 
         
-        reminders.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)); // Sort by full dateTime
+        reminders.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)); 
 
-        reminders.forEach((reminder, index) => {
+        reminders.forEach((reminder) => { // Changed index to not rely on it for deletion
             const itemEl = document.createElement('div');
             itemEl.className = 'reminder-item'; 
 
@@ -385,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dateTimeBadge = document.createElement('span');
             dateTimeBadge.className = 'reminder-time-badge';
             const d = new Date(reminder.dateTime);
-            // Format: "May 31, 09:30 AM" or "Today, 09:30 AM" or "Tomorrow, 09:30 AM"
+            
             const today = new Date();
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
@@ -396,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (d.toDateString() === tomorrow.toDateString()) {
                 dateDisplay = 'Tomorrow, ';
             } else {
-                dateDisplay = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ';
+                dateDisplay = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined }) + ', ';
             }
             dateTimeBadge.textContent = dateDisplay + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -407,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteBtn.className = 'delete-btn';
             deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.177-2.365.298a.75.75 0 0 0-.53.904l.523 4.386A3.75 3.75 0 0 0 7.48 12.5H12.52a3.75 3.75 0 0 0 3.352-2.912l.523-4.386a.75.75 0 0 0-.53-.904c-.785-.12-1.57-.221-2.365-.298v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg>';
             deleteBtn.title = "Delete Reminder";
-            deleteBtn.onclick = () => deleteCustomReminder(index); // Pass original index before sort if needed, or use ID
+            deleteBtn.onclick = () => deleteCustomReminderById(reminder.id); // Use ID for deletion
             
             actionsWrapper.appendChild(deleteBtn);
             itemEl.appendChild(textPart);
@@ -419,9 +428,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function handleNewReminderSubmit(e) {
         e.preventDefault();
+        if (!reminderTextInput || !reminderTimeInput || !reminderDateInput || !newReminderForm) return;
+
         const text = reminderTextInput.value.trim();
         const time = reminderTimeInput.value; 
-        const dateStr = reminderDateInput.value; // YYYY-MM-DD
+        const dateStr = reminderDateInput.value; 
 
         if (!text || !time) {
             showActionFeedback('Reminder text and time are required.', 'error');
@@ -430,15 +441,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let reminderDateTime;
         const now = new Date();
-        const todayDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        // Ensure date part doesn't use local time zone for construction if time is separate
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Midnight today
 
-
+        let effectiveDateStr;
         if (dateStr) {
-            reminderDateTime = new Date(`${dateStr}T${time}`);
+            effectiveDateStr = dateStr;
         } else {
             // Default to today if no date is picked
-            reminderDateTime = new Date(`${todayDateStr}T${time}`);
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            effectiveDateStr = `${year}-${month}-${day}`;
         }
+        
+        reminderDateTime = new Date(`${effectiveDateStr}T${time}`);
 
         if (reminderDateTime <= now) {
             showActionFeedback('Reminder date/time must be in the future.', 'error');
@@ -449,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             id: `custom-${Date.now()}`,
             text: text,
             time: time, 
-            date: dateStr || todayDateStr, 
+            date: effectiveDateStr, 
             dateTime: reminderDateTime.toISOString(), 
             createdAt: new Date().toISOString()
         };
@@ -457,11 +474,14 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.local.get({ customReminders: [] }, (result) => {
             const updatedReminders = [...result.customReminders, newReminder];
             chrome.storage.local.set({ customReminders: updatedReminders }, () => {
-                const formattedDateTime = reminderDateTime.toLocaleDateString([], {month: 'short', day: 'numeric'}) + ', ' + reminderDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const formattedDateTime = reminderDateTime.toLocaleDateString([], {month: 'short', day: 'numeric', year: reminderDateTime.getFullYear() !== today.getFullYear() ? 'numeric' : undefined }) + ', ' + 
+                                      reminderDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 showActionFeedback(`Reminder set for ${formattedDateTime}!`, 'success');
                 speak(`Reminder set for ${text}`);
-                renderUpcomingReminders(updatedReminders);
+                renderUpcomingReminders(updatedReminders); // Update list immediately
                 newReminderForm.reset(); 
+                if(reminderDateInput) reminderDateInput.value = ''; // Explicitly clear date picker
+                
                 chrome.runtime.sendMessage({ action: "scheduleCustomReminder", reminder: newReminder }, response => {
                     if (chrome.runtime.lastError) {
                         console.error("Error sending scheduleCustomReminder:", chrome.runtime.lastError.message);
@@ -475,23 +495,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if(newReminderForm) newReminderForm.addEventListener('submit', handleNewReminderSubmit);
 
-    function deleteCustomReminder(indexToDelete) { // Consider using ID for deletion if sorting changes index
+    function deleteCustomReminderById(reminderIdToDelete) { 
          chrome.storage.local.get({ customReminders: [] }, (result) => {
-            // If using index after sorting, we need to find the original item by ID or a stable property
-            // For now, assuming index is from the currently rendered (and sorted) list.
-            // A more robust way is to pass the reminder.id to delete.
-            // Let's assume for now the index corresponds to the sorted list and we refetch to be sure.
-            let reminders = result.customReminders;
-            reminders.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)); // Ensure same sort as display
-            
-            const reminderToDelete = reminders[indexToDelete];
+            const reminderToDelete = result.customReminders.find(r => r.id === reminderIdToDelete);
             if (!reminderToDelete) {
-                console.error("Reminder to delete not found at index:", indexToDelete);
+                console.error("Reminder to delete not found by ID:", reminderIdToDelete);
                 return;
             }
 
             if (confirm(`Are you sure you want to delete the reminder: "${reminderToDelete.text}"?`)) {
-                const updatedReminders = result.customReminders.filter(r => r.id !== reminderToDelete.id); // Delete by ID
+                const updatedReminders = result.customReminders.filter(r => r.id !== reminderIdToDelete); 
                 chrome.storage.local.set({ customReminders: updatedReminders }, () => {
                     renderUpcomingReminders(updatedReminders);
                     showActionFeedback('Reminder deleted.', 'success');
@@ -513,15 +526,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if(apiKeyInputSection) apiKeyInputSection.classList.toggle('hidden');
     });
     if(saveApiKeyButton) saveApiKeyButton.addEventListener('click', () => {
+        if(!youtubeApiKeyInput) return;
         const key = youtubeApiKeyInput.value.trim();
         if (key) {
             chrome.storage.local.set({ [YOUTUBE_API_KEY_STORAGE_KEY]: key }, () => {
                 YOUTUBE_API_KEY = key;
                 showActionFeedback('API Key saved!', 'success');
                 if(apiKeyInputSection) apiKeyInputSection.classList.add('hidden');
-                if(youtubeApiKeyInput) youtubeApiKeyInput.value = ''; 
+                youtubeApiKeyInput.value = ''; 
                  if(ytStatsMessage) ytStatsMessage.textContent = 'API Key configured. Navigate to a YouTube channel and click "Get Stats".';
-                 if(youtubeStatsDisplay && ytStatsMessage) { // Clear previous stats/errors
+                 if(youtubeStatsDisplay && ytStatsMessage) { 
                     youtubeStatsDisplay.innerHTML = ''; 
                     youtubeStatsDisplay.appendChild(ytStatsMessage);
                  }
@@ -535,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result[YOUTUBE_API_KEY_STORAGE_KEY]) {
                 YOUTUBE_API_KEY = result[YOUTUBE_API_KEY_STORAGE_KEY];
                 console.log("YouTube API Key loaded from storage.");
-                 if(ytStatsMessage) ytStatsMessage.textContent = 'API Key loaded. Navigate to a YouTube channel and click "Get Stats".';
+                 if(ytStatsMessage) ytStatsMessage.textContent = 'API Key loaded. Click "Get Stats" on a channel page.';
             } else {
                 console.log("YouTube API Key not found in storage. Please configure.");
                 if(ytStatsMessage) {
@@ -546,12 +560,56 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     if(fetchYouTubeStatsButton) fetchYouTubeStatsButton.addEventListener('click', () => {
-        if (!YOUTUBE_API_KEY) { /* ... error handling ... */ return; }
-        if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="loading-text">Fetching channel ID...</p>`;
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => { /* ... rest of logic ... */ });
+        if (!YOUTUBE_API_KEY) { 
+             if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="error-text">Error: YouTube API Key is not configured.</p>`;
+             showActionFeedback('Please configure your YouTube API Key first.', 'error');
+             if(apiKeyInputSection) apiKeyInputSection.classList.remove('hidden');
+            return; 
+        }
+        if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="loading-text">Checking current tab...</p>`;
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs || tabs.length === 0 || !tabs[0].id || !tabs[0].url) {
+                if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="error-text">Error: Could not get active tab info.</p>`;
+                return;
+            }
+            if (!tabs[0].url.includes("youtube.com/channel/UC")) {
+                 if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="error-text">Not a YouTube page. Navigate to a channel and try again.</p>`;
+                return;
+            }
+            const activeTabId = tabs[0].id;
+            if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="loading-text">Fetching channel ID from page...</p>`;
+            chrome.tabs.sendMessage(activeTabId, { action: "getYouTubeChannelId" }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error("Error messaging content script:", chrome.runtime.lastError.message);
+                    if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="error-text">Error communicating with page. Reload page & extension. (${chrome.runtime.lastError.message})</p>`;
+                    return;
+                }
+                if (response && response.status === "success" && response.channelId) {
+                    const channelId = response.channelId;
+                    if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="loading-text">Channel ID: ${channelId}. Fetching stats...</p>`;
+                    fetchChannelStats(channelId);
+                } else {
+                    const errorMessage = response && response.message ? response.message : "Could not determine Channel ID.";
+                    if(youtubeStatsDisplay) youtubeStatsDisplay.innerHTML = `<p class="error-text">Error: ${errorMessage} Ensure you are on a main channel page.</p>`;
+                }
+            });
+        });
     });
-    async function fetchChannelStats(channelId) { /* ... (Full implementation from previous version) ... */ }
-    function formatNumber(numStr) { /* ... (Full implementation from previous version) ... */ }
+    async function fetchChannelStats(channelId) { 
+        const apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${YOUTUBE_API_KEY}`;
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) { /* ... error handling from previous version ... */ return; }
+            const data = await response.json();
+            if (data.items && data.items.length > 0) { /* ... display stats ... */ }
+            else { /* ... no channel data found ... */ }
+        } catch (error) { /* ... fetch error ... */ }
+    }
+    function formatNumber(numStr) { 
+        if (!numStr) return 'N/A';
+        const num = parseInt(numStr, 10);
+        return num.toLocaleString();
+     }
 
 
     // --- Greeting Logic ---
@@ -569,6 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Voice Settings ---
     if(updateVoiceSettingsButton) updateVoiceSettingsButton.addEventListener('click', () => {
+        if(!voiceSelect || !enableVoiceGreeting || !enableSpokenReminders) return;
         const selectedVoiceName = voiceSelect.value; 
         const greetingEnabled = enableVoiceGreeting.checked;
         const remindersEnabled = enableSpokenReminders.checked;
@@ -592,8 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 greetUser(result.userProfile.name);
                 renderTodos(result.todos || []); 
                 updateBottomTodoBanner(result.todos || []);
-                // Upcoming reminders are rendered when navigating to their view.
-                // Load API key here as well.
+                
                 if (result[YOUTUBE_API_KEY_STORAGE_KEY]) { 
                     YOUTUBE_API_KEY = result[YOUTUBE_API_KEY_STORAGE_KEY];
                     if(ytStatsMessage) ytStatsMessage.textContent = 'API Key loaded. Navigate to a YouTube channel and click "Get Stats".';
@@ -613,6 +671,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     ytStatsMessage.textContent = 'Please complete setup first.';
                     if(ytStatsMessage.classList) ytStatsMessage.classList.remove('error-text');
                 }
+                 // Clear any potentially loaded data if setup is not complete
+                if(todoListElement) todoListElement.innerHTML = '<p class="info-text centered-text">No tasks yet.</p>';
+                if(upcomingRemindersList) upcomingRemindersList.innerHTML = '<p class="info-text centered-text">No upcoming reminders set.</p>';
             }
         });
     }
