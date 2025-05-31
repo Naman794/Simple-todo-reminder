@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Reminder</title>
+    <title>Daily Reminder & YT Stats</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -12,25 +12,21 @@
         <div id="setupSection" class="card">
             <h1 class="main-title">Welcome!</h1>
             <p class="subtitle">Let's personalize your experience.</p>
-
             <form id="setupForm" class="form-layout">
                 <div>
                     <label for="userName" class="form-label">Your Name <span class="required-asterisk">*</span></label>
                     <input type="text" id="userName" name="userName" class="input-field" placeholder="E.g., Alex" required>
                 </div>
-
                 <div>
                     <label for="userEmail" class="form-label">Email (Optional)</label>
                     <input type="email" id="userEmail" name="userEmail" class="input-field" placeholder="E.g., alex@example.com">
                     <p class="info-text">Stored locally. Not shared.</p>
                 </div>
-
                 <div>
                     <label for="userDOB" class="form-label">Date of Birth (Optional)</label>
                     <input type="date" id="userDOB" name="userDOB" class="input-field" placeholder="mm/dd/yyyy">
                      <p class="info-text">For an optional birthday greeting!</p>
                 </div>
-
                 <button type="submit" class="btn btn-primary full-width">Save & Continue</button>
                 <p class="small-text centered-text">Your info is stored locally & never shared.</p>
             </form>
@@ -42,7 +38,28 @@
                 <button id="logoutButton" class="btn-subtle">Reset Setup</button>
             </div>
 
-            <div id="todoCard" class="card">
+            <div id="homeScreenNav" class="card"> <h3 class="section-title">What would you like to do?</h3>
+                <div class="nav-grid">
+                    <button id="navToTodos" class="nav-button">
+                        <span class="nav-icon">📝</span> My To-Do List
+                    </button>
+                    <button id="navToSetReminder" class="nav-button">
+                        <span class="nav-icon">⏰</span> Set New Reminder
+                    </button>
+                    <button id="navToUpcomingReminders" class="nav-button">
+                        <span class="nav-icon">🗓️</span> Upcoming Reminders
+                    </button>
+                    <button id="navToYouTubeStats" class="nav-button">
+                        <span class="nav-icon">📊</span> YouTube Channel Stats
+                    </button>
+                    <button id="navToSettings" class="nav-button">
+                        <span class="nav-icon">⚙️</span> Settings
+                    </button>
+                </div>
+            </div>
+
+            <div id="todoCard" class="card feature-section hidden">
+                <button class="btn-back" data-target-view="homeScreenNav">← Back to Home</button>
                 <h3 class="section-title">My To-Do List</h3>
                 <div>
                     <label for="todoInput" class="form-label">New To-Do Item:</label>
@@ -51,47 +68,64 @@
                         <button id="addTodoButton" class="btn btn-primary">Add Task</button>
                     </div>
                 </div>
-
-                <div id="todoList" class="todo-list-container">
-                    </div>
+                <div id="todoList" class="todo-list-container"></div>
                 <button id="clearAllTodosButton" class="btn btn-danger full-width hidden">Clear All To-dos</button>
             </div>
 
-            <div id="newReminderCard" class="card">
+            <div id="newReminderCard" class="card feature-section hidden">
+                <button class="btn-back" data-target-view="homeScreenNav">← Back to Home</button>
                 <h3 class="section-title">Set a New Reminder</h3>
                 <form id="newReminderForm" class="form-layout">
                     <div>
                         <label for="reminderText" class="form-label">Reminder Text:</label>
                         <input type="text" id="reminderText" class="input-field" placeholder="E.g., Call John" required>
                     </div>
-                    <div>
-                        <label for="reminderTime" class="form-label">Reminder Time (Today):</label>
-                        <input type="time" id="reminderTime" class="input-field" required>
+                    <div class="input-row"> 
+                        <div class="input-col">
+                            <label for="reminderDate" class="form-label">Date:</label>
+                            <input type="date" id="reminderDate" class="input-field">
+                        </div>
+                        <div class="input-col">
+                            <label for="reminderTime" class="form-label">Time:</label>
+                            <input type="time" id="reminderTime" class="input-field" required>
+                        </div>
                     </div>
-                    <!-- 
-                    <div>
-                        <label for="reminderDate" class="form-label">Reminder Date (Optional, defaults to today):</label>
-                        <input type="date" id="reminderDate" class="input-field">
-                    </div>
-                     -->
                     <button type="submit" class="btn btn-primary full-width">Set Reminder</button>
                 </form>
             </div>
             
-            <div id="upcomingRemindersCard" class="card hidden"> <h3 class="section-title">Upcoming Reminders</h3>
+            <div id="upcomingRemindersCard" class="card feature-section hidden">
+                <button class="btn-back" data-target-view="homeScreenNav">← Back to Home</button>
+                <h3 class="section-title">Upcoming Reminders</h3>
                 <div id="upcomingRemindersList" class="todo-list-container">
                     <p class="info-text centered-text">No upcoming reminders set.</p>
                 </div>
             </div>
 
+            <div id="youtubeStatsCard" class="card feature-section hidden">
+                <button class="btn-back" data-target-view="homeScreenNav">← Back to Home</button>
+                <h3 class="section-title">YouTube Channel Stats</h3>
+                <button id="fetchYouTubeStatsButton" class="btn btn-secondary full-width">Get Stats for Current Channel</button>
+                <div id="youtubeStatsDisplay" class="yt-stats-display">
+                    <p class="info-text centered-text" id="ytStatsMessage">Navigate to a YouTube channel page and click the button.</p>
+                </div>
+                <div class="api-key-note">
+                    <p class="info-text">Note: This feature requires a YouTube Data API Key. <button id="configureApiKeyButton" class="btn-subtle small-text">(Configure)</button></p>
+                    <div id="apiKeyInputSection" class="hidden mt-2">
+                        <label for="youtubeApiKey" class="form-label small-text">YouTube Data API Key:</label>
+                        <input type="password" id="youtubeApiKey" class="input-field input-sm" placeholder="Enter your API Key">
+                        <button id="saveApiKeyButton" class="btn btn-primary btn-sm mt-1">Save Key</button>
+                    </div>
+                </div>
+            </div>
 
-            <div id="settingsSection" class="card">
+            <div id="settingsSection" class="card feature-section hidden">
+                <button class="btn-back" data-target-view="homeScreenNav">← Back to Home</button>
                 <h3 class="section-title">Voice & Other Settings</h3>
                 <div class="settings-group">
                     <div>
                         <label for="voiceSelect" class="form-label">Notification Voice:</label>
-                        <select id="voiceSelect" class="input-field select-field">
-                            </select>
+                        <select id="voiceSelect" class="input-field select-field"></select>
                     </div>
                      <div class="checkbox-group" onclick="document.getElementById('enableVoiceGreeting').click()">
                         <input type="checkbox" id="enableVoiceGreeting" class="checkbox-input">
@@ -109,14 +143,13 @@
         
         <div id="bottomTodoBanner" class="bottom-banner hidden">
             <p id="bottomTodoBannerText" class="bottom-banner-text"></p>
-            <button id="dismissBottomTodoBannerBtn" class="dismiss-banner-btn">&times;</button>
+            <button id="dismissBottomTodoBannerBtn" class="dismiss-banner-btn">×</button>
         </div>
 
         <div id="actionFeedbackPopup" class="action-feedback-popup">
             <span id="actionFeedbackText"></span>
         </div>
     </div>
-
     <script src="popup.js"></script>
 </body>
 </html>
