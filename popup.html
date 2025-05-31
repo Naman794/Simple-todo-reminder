@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Reminder & YT Stats</title>
+    <title>Daily Voice Reminder</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -38,7 +38,8 @@
                 <button id="logoutButton" class="btn-subtle">Reset Setup</button>
             </div>
 
-            <div id="homeScreenNav" class="card"> <h3 class="section-title">What would you like to do?</h3>
+            <div id="homeScreenNav" class="card"> 
+                <h3 class="section-title">What would you like to do?</h3>
                 <div class="nav-grid">
                     <button id="navToTodos" class="nav-button">
                         <span class="nav-icon">📝</span> My To-Do List
@@ -48,9 +49,6 @@
                     </button>
                     <button id="navToUpcomingReminders" class="nav-button">
                         <span class="nav-icon">🗓️</span> Upcoming Reminders
-                    </button>
-                    <button id="navToYouTubeStats" class="nav-button">
-                        <span class="nav-icon">📊</span> YouTube Channel Stats
                     </button>
                     <button id="navToSettings" class="nav-button">
                         <span class="nav-icon">⚙️</span> Settings
@@ -102,23 +100,6 @@
                 </div>
             </div>
 
-            <div id="youtubeStatsCard" class="card feature-section hidden">
-                <button class="btn-back" data-target-view="homeScreenNav">← Back to Home</button>
-                <h3 class="section-title">YouTube Channel Stats</h3>
-                <button id="fetchYouTubeStatsButton" class="btn btn-secondary full-width">Get Stats for Current Channel</button>
-                <div id="youtubeStatsDisplay" class="yt-stats-display">
-                    <p class="info-text centered-text" id="ytStatsMessage">Navigate to a YouTube channel page and click the button.</p>
-                </div>
-                <div class="api-key-note">
-                    <p class="info-text">Note: This feature requires a YouTube Data API Key. <button id="configureApiKeyButton" class="btn-subtle small-text">(Configure)</button></p>
-                    <div id="apiKeyInputSection" class="hidden mt-2">
-                        <label for="youtubeApiKey" class="form-label small-text">YouTube Data API Key:</label>
-                        <input type="password" id="youtubeApiKey" class="input-field input-sm" placeholder="Enter your API Key">
-                        <button id="saveApiKeyButton" class="btn btn-primary btn-sm mt-1">Save Key</button>
-                    </div>
-                </div>
-            </div>
-
             <div id="settingsSection" class="card feature-section hidden">
                 <button class="btn-back" data-target-view="homeScreenNav">← Back to Home</button>
                 <h3 class="section-title">Voice & Other Settings</h3>
@@ -135,8 +116,12 @@
                         <input type="checkbox" id="enableSpokenReminders" class="checkbox-input" checked>
                         <label for="enableSpokenReminders" class="checkbox-label">Enable Spoken Reminders (for custom alerts)</label>
                     </div>
-                    <button id="updateVoiceSettingsButton" class="btn btn-secondary">Update Voice Settings</button>
-                    <p id="settingsStatus" class="status-text-small"></p>
+                    <div class="mt-4">
+                         <label for="discordWebhookUrlInput" class="form-label">Discord Webhook URL (Optional):</label>
+                         <input type="url" id="discordWebhookUrlInput" class="input-field" placeholder="Enter your Discord webhook URL">
+                         <p class="info-text">For sending extension logs to a Discord channel.</p>
+                    </div>
+                    <button id="updateVoiceSettingsButton" class="btn btn-secondary">Update Settings</button> <p id="settingsStatus" class="status-text-small"></p>
                 </div>
             </div>
         </div>

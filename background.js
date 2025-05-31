@@ -86,6 +86,7 @@ async function removePastOrInvalidReminderFromStorage(reminderId) {
             logToDiscord(`Reminder cleared from storage: "${reminderToRemove?.text || reminderId}"`, 'info');
             
             chrome.runtime.sendMessage({ action: "refreshReminders" }).catch(e => console.log("Popup not open or error sending refresh message:", e.message || e));
+            // No need to send feedback via showActionFeedback here as it's a background cleanup
         }
     } catch (error) {
         console.error("Error removing reminder from storage:", error);
@@ -98,25 +99,26 @@ function scheduleSpecificCustomReminder(reminder) {
     if (!reminder || !reminder.id || !reminder.dateTime || !reminder.text) {
         console.error("Invalid reminder object for scheduling:", reminder);
         logToDiscord(`Failed to schedule reminder: Invalid data. ID: ${reminder?.id || 'N/A'}`, 'error');
-        if(reminder && reminder.id) removePastOrInvalidReminderFromStorage(reminder.id);
+        if(reminder && reminder.id) removePastOrInvalidReminderFromStorage(reminder.id); // Clean up if possible
         return;
     }
 
     const scheduleTime = new Date(reminder.dateTime).getTime();
     const now = Date.now();
 
-    if (scheduleTime <= (now - 60000)) { 
+    // Check if the scheduled time is in the past (e.g. by more than a minute to allow for slight delays)
+    if (scheduleTime <= (now - 60000)) { // Allow a 1-minute grace for very near past due to processing
         console.log(`Reminder time for "${reminder.text}" (ID: ${reminder.id}) at ${new Date(reminder.dateTime).toLocaleString()} is in the past. Not scheduling.`);
         logToDiscord(`Attempted to schedule past reminder (not scheduled): "${reminder.text}" for ${new Date(reminder.dateTime).toLocaleString()}`, 'warning');
-        chrome.alarms.clear(CUSTOM_REMINDER_ALARM_PREFIX + reminder.id); 
-        removePastOrInvalidReminderFromStorage(reminder.id); 
+        chrome.alarms.clear(CUSTOM_REMINDER_ALARM_PREFIX + reminder.id); // Ensure any old alarm is cleared
+        removePastOrInvalidReminderFromStorage(reminder.id); // Remove it from storage
         return;
     }
 
     chrome.alarms.create(CUSTOM_REMINDER_ALARM_PREFIX + reminder.id, {
         when: scheduleTime
     });
-    console.log(`Custom reminder "${reminder.text}" (ID: ${reminder.id}) scheduled for: ${new Date(scheduleTime).toLocaleString()}`);
+    console.log(`Custom reminder "${reminder.text}" (ID: ${reminder.id}) scheduled for: ${new Date(scheduleTime).toLocaleString()} with alarm name: ${CUSTOM_REMINDER_ALARM_PREFIX + reminder.id}`);
     logToDiscord(`Reminder scheduled: "${reminder.text}" for ${new Date(scheduleTime).toLocaleString()}`, 'success');
 }
 
@@ -127,6 +129,7 @@ function cancelSpecificCustomReminder(reminderId) {
             console.log(`Cancelled alarm: ${alarmName}`);
             // Logging for cancellation is now handled in the onMessage listener for better context
         } else {
+            // It's possible the alarm already fired and was cleared, or was never set due to being in the past.
             console.log(`No alarm found to cancel (or already cleared) with name: ${alarmName}`);
         }
     });
@@ -135,7 +138,7 @@ function cancelSpecificCustomReminder(reminderId) {
 async function rescheduleAllCustomReminders() {
     try {
         const result = await new Promise(resolve => chrome.storage.local.get({ customReminders: [] }, resolve));
-        let remindersToKeep = []; 
+        let remindersToKeep = []; // Trackers for what's actually kept after this process
         let madeStorageChanges = false;
 
         if (result.customReminders && result.customReminders.length > 0) {
@@ -143,14 +146,18 @@ async function rescheduleAllCustomReminders() {
             for (const reminder of result.customReminders) {
                 if (reminder.dateTime) {
                     const reminderTimeMs = new Date(reminder.dateTime).getTime();
-                    if (reminderTimeMs > (Date.now() - 60000)) { 
-                        scheduleSpecificCustomReminder(reminder); 
-                        remindersToKeep.push(reminder); 
+                    if (reminderTimeMs > (Date.now() - 60000)) { // Check if it's in the future (with 1 min grace)
+                        scheduleSpecificCustomReminder(reminder); // This function already checks if it's past
+                        remindersToKeep.push(reminder); // Keep it if scheduled or still future
                     } else {
                         console.log(`During reschedule: Reminder "${reminder.text}" (ID: ${reminder.id}) at ${new Date(reminder.dateTime).toLocaleString()} is past. Clearing.`);
                         logToDiscord(`Reschedule: Found past reminder "${reminder.text}". Clearing.`, 'warning');
-                        cancelSpecificCustomReminder(reminder.id); 
-                        madeStorageChanges = true; 
+                        cancelSpecificCustomReminder(reminder.id); // Ensure alarm is cleared
+                        // The actual removal from storage will happen if scheduleSpecificCustomReminder is called
+                        // or if we explicitly call removePastOrInvalidReminderFromStorage here.
+                        // For now, scheduleSpecificCustomReminder handles its own removal logic if it determines it's past.
+                        // We just need to ensure we don't keep it in remindersToKeep if it's past.
+                        madeStorageChanges = true; // Indicate a potential change to storage
                     }
                 } else {
                      console.warn(`During reschedule: Reminder (ID: ${reminder.id}) missing dateTime. Will be removed.`);
@@ -159,11 +166,14 @@ async function rescheduleAllCustomReminders() {
                      madeStorageChanges = true;
                 }
             }
+             // If madeChanges implies some reminders were filtered out *before* calling scheduleSpecificCustomReminder
+             // (e.g. due to missing dateTime), we need to update storage.
             if (madeStorageChanges && result.customReminders.length !== remindersToKeep.length) {
                 await new Promise(resolve => chrome.storage.local.set({ customReminders: remindersToKeep }, resolve));
-                console.log("Storage updated after rescheduling, removed past/invalid reminders.");
+                console.log("Storage updated after rescheduling, removed past/invalid reminders not caught by scheduleSpecificCustomReminder.");
                 chrome.runtime.sendMessage({ action: "refreshReminders" }).catch(e => console.log("Popup not open or error sending refresh message:", e.message || e));
             }
+
         } else {
             console.log("No custom reminders to reschedule.");
         }
@@ -187,7 +197,6 @@ chrome.runtime.onInstalled.addListener((details) => {
         if (result.voiceGreetingEnabled === undefined) defaultsToSet.voiceGreetingEnabled = false;
         if (result.spokenRemindersEnabled === undefined) defaultsToSet.spokenRemindersEnabled = true;
         
-        // Set your provided webhook URL as a default ONLY if one isn't already set
         if (result[DISCORD_WEBHOOK_URL_KEY] === undefined || result[DISCORD_WEBHOOK_URL_KEY] === "") {
             defaultsToSet[DISCORD_WEBHOOK_URL_KEY] = "https://discord.com/api/webhooks/1378404616949071954/6rUxlPetQpM1f7LQp7SoRYovFL02UJBhWQBz7rFL5fGUV-OvXkKRm4namty6YFp-2CQ7";
             logToDiscord("Default Discord webhook URL set during installation.", "info");
@@ -263,7 +272,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
                 speakInBackground(`Reminder: ${reminder.text}`);
                 removePastOrInvalidReminderFromStorage(reminder.id); 
             } else {
-                console.warn("Fired alarm for a custom reminder not found in storage:", alarm.name);
+                console.warn("Fired alarm for a custom reminder not found in storage (might have been deleted):", alarm.name);
                 logToDiscord(`Fired alarm for missing reminder ID: ${reminderId}`, 'warning');
             }
         });
@@ -277,7 +286,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ status: "Custom reminder scheduling processed by background." });
         return true; 
     } else if (request.action === "cancelCustomReminder" && request.reminderId) {
-        chrome.storage.local.get({ customReminders: [] }, (result) => { // Fetch for logging context
+        chrome.storage.local.get({ customReminders: [] }, (result) => { 
             const reminderToCancel = result.customReminders.find(r => r.id === request.reminderId);
             const reminderTextLog = reminderToCancel ? `"${reminderToCancel.text}" (ID: ${request.reminderId})` : `ID: ${request.reminderId}`;
             logToDiscord(`Reminder cancellation requested from popup: ${reminderTextLog}`, 'info');
