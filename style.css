@@ -88,14 +88,14 @@ body {
     margin-bottom: 16px; 
 }
 
-.input-row { /* For date and time inputs */
+.input-row { 
     display: flex;
     gap: 16px; 
     align-items: flex-end; 
 }
 
 .input-col {
-    flex: 1; /* Each column takes equal space */
+    flex: 1; 
 }
 
 
@@ -207,12 +207,12 @@ input[type="time"]::-webkit-clear-button {
     filter: invert(0.5);
 }
 
-input[type="date"]:not(:valid)::-webkit-datetime-edit, /* For empty date placeholder */
+input[type="date"]:not(:valid)::-webkit-datetime-edit, 
 input[type="date"]:required:invalid::-webkit-datetime-edit,
 input[type="time"]:required:invalid::-webkit-datetime-edit-hour-field, 
 input[type="time"]:required:invalid::-webkit-datetime-edit-minute-field,
 input[type="time"]:required:invalid::-webkit-datetime-edit-ampm-field {
-    color: #a0aec0; /* Placeholder color */
+    color: #a0aec0; 
 }
 
 input[type="date"]:focus::-webkit-datetime-edit,
@@ -223,7 +223,7 @@ input[type="time"]:focus::-webkit-datetime-edit-minute-field,
 input[type="time"]:valid::-webkit-datetime-edit-minute-field,
 input[type="time"]:focus::-webkit-datetime-edit-ampm-field,
 input[type="time"]:valid::-webkit-datetime-edit-ampm-field {
-    color: #2d3748; /* Actual input color */
+    color: #2d3748; 
 }
 
 
@@ -242,6 +242,7 @@ input[type="time"]:valid::-webkit-datetime-edit-ampm-field {
     border: 1px solid #cbd5e0;
     border-radius: 4px;
     cursor: pointer;
+    flex-shrink: 0; 
 }
 .checkbox-input:focus {
     outline: none;
@@ -272,7 +273,6 @@ input[type="time"]:valid::-webkit-datetime-edit-ampm-field {
     box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3); 
 }
 
-
 .btn-primary {
     background-color: #4f46e5; 
     color: #ffffff;
@@ -295,6 +295,12 @@ input[type="time"]:valid::-webkit-datetime-edit-ampm-field {
 .btn-secondary:active {
     background-color: #c7d2fe; 
 }
+.btn-sm { 
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
 
 .btn-danger {
     background-color: #dc2626; 
@@ -417,23 +423,35 @@ input[type="time"]:valid::-webkit-datetime-edit-ampm-field {
 
 .todo-item, .reminder-item { 
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px;
+    padding: 0; 
     border-radius: 6px;
     background-color: #f8fafc; 
     border: 1px solid #e2e8f0; 
     transition: background-color 0.15s ease-in-out;
+    flex-direction: column; 
 }
-.todo-item:hover, .reminder-item:hover {
+.todo-item:hover { 
     background-color: #f1f5f9; 
 }
-
-.todo-item.completed {
-    background-color: #f0fdf4; 
-    border-color: #bbf7d0; 
+.reminder-item { 
+    flex-direction: row;
+    align-items: center;
+    padding: 12px; 
 }
-.todo-item.completed .todo-text {
+.reminder-item:hover {
+    background-color: #f1f5f9;
+}
+
+
+.main-task-area { 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12px; 
+}
+
+.todo-item.completed .todo-text { 
     text-decoration: line-through;
     color: #166534; 
 }
@@ -460,6 +478,7 @@ input[type="time"]:valid::-webkit-datetime-edit-ampm-field {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0; 
 }
 .todo-item-actions button, .reminder-item-actions button {
     background: none;
@@ -469,81 +488,112 @@ input[type="time"]:valid::-webkit-datetime-edit-ampm-field {
     line-height: 0; 
     box-shadow: none;
 }
-.todo-item-actions button svg, .reminder-item-actions button svg {
+.action-icon { 
     width: 20px;
     height: 20px;
-    transition: transform 0.1s ease-in-out;
+    fill: #6b7280; 
+    transition: transform 0.2s ease-in-out;
 }
-.todo-item-actions button:hover svg, .reminder-item-actions button:hover svg {
-    transform: scale(1.15);
+.todo-item-actions button:hover .action-icon, 
+.reminder-item-actions button:hover .action-icon {
+    fill: #4b5563; 
 }
-.todo-item-actions button.complete-btn svg {
+
+.todo-item-actions button.complete-btn .action-icon { 
     fill: #22c55e; 
 }
-.todo-item-actions button.complete-btn.completed svg {
+.todo-item-actions button.complete-btn.completed .action-icon {
     fill: #facc15; 
 }
-.todo-item-actions button.delete-btn svg,
-.reminder-item-actions button.delete-btn svg { 
+.todo-item-actions button.delete-btn .action-icon,
+.reminder-item-actions button.delete-btn .action-icon { 
     fill: #ef4444; 
 }
 .todo-item-actions button:focus, .reminder-item-actions button:focus {
     box-shadow: 0 0 0 2px rgba(90, 103, 216, 0.2); 
     border-radius: 4px;
 }
-
-/* --- YouTube Stats Section --- */
-.yt-stats-display {
-    margin-top: 16px;
-    padding: 12px;
-    background-color: #f8fafc; 
-    border-radius: 6px;
-    border: 1px solid #e2e8f0; 
-    min-height: 60px; 
-}
-.yt-stats-display p {
-    margin: 0 0 8px 0;
-    font-size: 14px;
-    color: #4a5568;
-}
-.yt-stats-display p strong {
-    color: #2d3748;
-}
-.yt-stats-display .loading-text {
-    color: #4c51bf; 
-    font-style: italic;
-}
-.yt-stats-display .error-text {
-    color: #c53030; 
-    font-weight: 500;
+.toggle-subtasks-btn .action-icon.expanded { 
+    transform: rotate(180deg);
 }
 
-.api-key-note {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px dashed #cbd5e0;
+
+/* --- Sub-task Specific Styles --- */
+.subtask-section {
+    margin-top: 0px; 
+    padding: 0px 12px 12px 32px; 
+    display: flex; 
+    flex-direction: column;
+    gap: 8px;
+    background-color: #fdfdff; 
+    border-top: 1px dashed #e2e8f0; 
 }
-.api-key-note .info-text {
-    margin-bottom: 4px;
+
+.subtask-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; 
+    margin-top: 8px;
 }
-.input-sm { 
-    padding: 8px 10px;
+
+.subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 6px; 
+    background-color: #ffffff; 
+    border-radius: 4px;
+    border: 1px solid #f0f0f5; 
+}
+.subtask-item:hover {
+    background-color: #f9fafb;
+}
+
+.subtask-checkbox { 
+    margin-left: 0; 
+}
+
+.subtask-text {
+    flex-grow: 1;
     font-size: 13px;
+    color: #4b5563; 
+    cursor: pointer; 
 }
-.btn-sm { 
-    padding: 6px 12px;
-    font-size: 13px;
-    font-weight: 500;
+.subtask-item input[type="checkbox"]:checked + .subtask-text {
+    text-decoration: line-through;
+    color: #9ca3af; 
 }
 
-
-/* --- Status Messages --- */
-.status-text-main { 
-    text-align: center;
-    font-size: 14px;
-    height: 20px; 
-    margin-top: 12px;
+.delete-subtask-btn {
+    background: none;
+    border: none;
+    color: #9ca3af; 
+    font-size: 18px; 
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    flex-shrink: 0;
 }
+.delete-subtask-btn:hover {
+    color: #ef4444; 
+}
+.delete-subtask-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2); 
+    border-radius: 4px;
+}
+
+.subtask-input-group {
+    margin-top: 10px; 
+    margin-bottom: 0; 
+}
+.subtask-input { 
+    font-size: 13px; 
+    padding: 8px 10px; 
+}
+
+/* --- Status Messages (for settings section) --- */
 .status-text-small { 
     font-size: 13px;
     height: 18px; 
@@ -595,45 +645,6 @@ input[type="time"]:valid::-webkit-datetime-edit-ampm-field {
     box-shadow: 0 0 0 2px rgba(90, 103, 216, 0.2); 
     border-radius: 4px;
 }
-
-/* --- Action Feedback Popup --- */
-.action-feedback-popup {
-    position: fixed; 
-    bottom: -60px; 
-    left: 50%;
-    transform: translateX(-50%);
-    min-width: 250px;
-    max-width: 90%;
-    background-color: #334155; 
-    color: white;
-    text-align: center;
-    border-radius: 6px;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    z-index: 1000;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    transition: bottom 0.4s ease-in-out, opacity 0.4s ease-in-out;
-    opacity: 0;
-    pointer-events: none; 
-}
-
-.action-feedback-popup.show {
-    bottom: 20px; 
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.action-feedback-popup.success {
-    background-color: #16a34a; 
-    color: white;
-}
-
-.action-feedback-popup.error {
-    background-color: #dc2626; 
-    color: white;
-}
-
 
 /* --- Utility --- */
 .hidden {

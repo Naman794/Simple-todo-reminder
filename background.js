@@ -10,20 +10,17 @@ const BIRTHDAY_CHECK_ALARM_NAME = 'dailyBirthdayCheck';
 const CUSTOM_REMINDER_ALARM_PREFIX = 'customReminderAlarm_'; 
 
 // --- Helper function to send message to content script for toast ---
-async function displayCustomToastInActiveTab(message) {
+async function displayCustomToastInActiveTab(message, toastType = 'info') { // Added toastType
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        // Check if the tab is a "normal" page where content scripts can run
-        // Avoid chrome://, about:, file:// (unless explicitly permitted)
         if (tab && tab.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('about:') && !tab.url.startsWith('file://')) {
             chrome.tabs.sendMessage(tab.id, {
                 action: "showCustomToast",
-                message: message
+                message: message,
+                toastType: toastType // Pass the type to the content script
             }, (response) => {
                 if (chrome.runtime.lastError) {
-                    console.warn("Could not send message to content script (toast_injector.js). Tab might not have it injected or is restricted:", chrome.runtime.lastError.message);
-                } else if (response && response.status) {
-                    // console.log("Content script responded to toast message:", response.status);
+                    console.warn("Could not send message to content script (toast_injector.js):", chrome.runtime.lastError.message);
                 }
             });
         } else {
@@ -245,7 +242,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
                     const greetingMessage = `Hey ${result.userProfile.name}, Good morning! Have a great day.`;
                     speakInBackground(greetingMessage); 
                     logToDiscord(`10 AM Greeting delivered to ${result.userProfile.name}.`, 'info');
-                    // No system notification or custom toast for this greeting, only spoken.
                 }
             });
         }
@@ -255,15 +251,16 @@ chrome.alarms.onAlarm.addListener((alarm) => {
                 const dob = new Date(result.userProfile.dob);
                 const today = new Date();
                 if (dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate()) {
-                    const birthdayMessage = `Happy Birthday, ${result.userProfile.name}! Hope you have a wonderful day!`;
-                    const notificationId = `birthdayNotif-${Date.now()}`;
-                    chrome.notifications.create(notificationId, {
+                    const toastMessage = `🎂 Happy Birthday, ${result.userProfile.name}!`;
+                    const speakMessage = `${toastMessage} Hope you have a wonderful day!`;
+                    
+                    chrome.notifications.create(`birthdayNotif-${Date.now()}`, {
                         type: 'basic', iconUrl: 'icons/icon128.png',
                         title: 'Happy Birthday!', message: `Happy Birthday, ${result.userProfile.name}!`, priority: 2
                     }, () => {
-                        displayCustomToastInActiveTab(`🎂 Happy Birthday, ${result.userProfile.name}!`);
+                        displayCustomToastInActiveTab(toastMessage, 'success'); // Success type for birthday toast
                     });
-                    speakInBackground(birthdayMessage);
+                    speakInBackground(speakMessage);
                     logToDiscord(`Birthday greeting delivered to ${result.userProfile.name}.`, 'success');
                 }
             }
@@ -274,21 +271,20 @@ chrome.alarms.onAlarm.addListener((alarm) => {
             const reminder = result.customReminders.find(r => r.id === reminderId);
             if (reminder) {
                 const reminderTime = new Date(reminder.dateTime).toLocaleString();
+                const toastMessage = `Reminder: ${reminder.text}`;
                 console.log(`Custom reminder triggered: ${reminder.text} at ${reminderTime}`);
                 logToDiscord(`Reminder Fired: "${reminder.text}" (Scheduled for: ${reminderTime})`, 'success');
                 
-                const notificationId = `customNotif-${reminder.id}-${Date.now()}`;
-                chrome.notifications.create(notificationId, {
+                chrome.notifications.create(`customNotif-${reminder.id}-${Date.now()}`, {
                     type: 'basic',
                     iconUrl: 'icons/icon128.png',
                     title: 'Reminder!',
                     message: reminder.text,
                     priority: 2,
                 }, () => {
-                    // Display custom toast after system notification is created
-                    displayCustomToastInActiveTab(`Reminder: ${reminder.text}`);
+                    displayCustomToastInActiveTab(toastMessage);
                 });
-                speakInBackground(`Reminder: ${reminder.text}`);
+                speakInBackground(toastMessage); // Speak the same message as the toast
                 removePastOrInvalidReminderFromStorage(reminder.id); 
             } else {
                 console.warn("Fired alarm for a custom reminder not found in storage:", alarm.name);
@@ -302,7 +298,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "scheduleCustomReminder" && request.reminder) {
         scheduleSpecificCustomReminder(request.reminder);
-        sendResponse({ status: "Custom reminder scheduling processed by background." });
+        sendResponse({ status: "Custom reminder scheduling processed." });
         return true; 
     } else if (request.action === "cancelCustomReminder" && request.reminderId) {
         chrome.storage.local.get({ customReminders: [] }, (result) => { 
@@ -312,8 +308,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         cancelSpecificCustomReminder(request.reminderId);
         removePastOrInvalidReminderFromStorage(request.reminderId); 
-        sendResponse({ status: "Custom reminder cancellation processed by background." });
+        sendResponse({ status: "Custom reminder cancellation processed." });
         return true; 
+    } else if (request.action === "showOnPageToast" && request.toastMessage) { // New listener
+        displayCustomToastInActiveTab(request.toastMessage, request.toastType || 'info');
+        sendResponse({ status: "On-page toast display attempted." });
+        return true;
     }
     return false; 
 });
