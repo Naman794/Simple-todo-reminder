@@ -9,18 +9,42 @@ const DAILY_GREETING_ALARM_NAME = 'dailyGreetingAlarm';
 const BIRTHDAY_CHECK_ALARM_NAME = 'dailyBirthdayCheck';
 const CUSTOM_REMINDER_ALARM_PREFIX = 'customReminderAlarm_'; 
 
+// --- Helper function to send message to content script for toast ---
+async function displayCustomToastInActiveTab(message) {
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        // Check if the tab is a "normal" page where content scripts can run
+        // Avoid chrome://, about:, file:// (unless explicitly permitted)
+        if (tab && tab.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('about:') && !tab.url.startsWith('file://')) {
+            chrome.tabs.sendMessage(tab.id, {
+                action: "showCustomToast",
+                message: message
+            }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.warn("Could not send message to content script (toast_injector.js). Tab might not have it injected or is restricted:", chrome.runtime.lastError.message);
+                } else if (response && response.status) {
+                    // console.log("Content script responded to toast message:", response.status);
+                }
+            });
+        } else {
+            console.log("No suitable active tab to display toast or tab URL is restricted.");
+        }
+    } catch (error) {
+        console.error("Error querying active tab for toast:", error);
+    }
+}
+
+
 // --- TTS from background ---
 function speakInBackground(text) {
     chrome.storage.local.get(['voiceName', 'spokenRemindersEnabled', 'voiceGreetingEnabled'], (settings) => {
         const lowerText = text.toLowerCase();
 
         if (lowerText.startsWith("reminder:") && !settings.spokenRemindersEnabled) {
-            // console.log("Spoken reminders disabled, skipping reminder TTS.");
             return;
         }
         
         if (!lowerText.startsWith("reminder:") && !settings.voiceGreetingEnabled) {
-            // console.log("Voice greetings disabled, skipping non-reminder TTS.");
             return;
         }
 
@@ -56,7 +80,6 @@ function scheduleDailyGreetingAlarm() {
         when: nextGreetingTime.getTime(),
         periodInMinutes: 24 * 60 
     });
-    // console.log(`Daily greeting alarm scheduled for: ${nextGreetingTime}`);
 }
 
 function scheduleBirthdayCheckAlarm() {
@@ -69,7 +92,6 @@ function scheduleBirthdayCheckAlarm() {
         when: nextCheckTime.getTime(),
         periodInMinutes: 24 * 60
     });
-    // console.log(`Birthday check alarm scheduled for: ${nextCheckTime}`);
 }
 
 // --- Custom Reminder Alarm Scheduling & Cancelling ---
@@ -86,7 +108,6 @@ async function removePastOrInvalidReminderFromStorage(reminderId) {
             logToDiscord(`Reminder cleared from storage: "${reminderToRemove?.text || reminderId}"`, 'info');
             
             chrome.runtime.sendMessage({ action: "refreshReminders" }).catch(e => console.log("Popup not open or error sending refresh message:", e.message || e));
-            // No need to send feedback via showActionFeedback here as it's a background cleanup
         }
     } catch (error) {
         console.error("Error removing reminder from storage:", error);
@@ -99,26 +120,25 @@ function scheduleSpecificCustomReminder(reminder) {
     if (!reminder || !reminder.id || !reminder.dateTime || !reminder.text) {
         console.error("Invalid reminder object for scheduling:", reminder);
         logToDiscord(`Failed to schedule reminder: Invalid data. ID: ${reminder?.id || 'N/A'}`, 'error');
-        if(reminder && reminder.id) removePastOrInvalidReminderFromStorage(reminder.id); // Clean up if possible
+        if(reminder && reminder.id) removePastOrInvalidReminderFromStorage(reminder.id);
         return;
     }
 
     const scheduleTime = new Date(reminder.dateTime).getTime();
     const now = Date.now();
 
-    // Check if the scheduled time is in the past (e.g. by more than a minute to allow for slight delays)
-    if (scheduleTime <= (now - 60000)) { // Allow a 1-minute grace for very near past due to processing
+    if (scheduleTime <= (now - 60000)) { 
         console.log(`Reminder time for "${reminder.text}" (ID: ${reminder.id}) at ${new Date(reminder.dateTime).toLocaleString()} is in the past. Not scheduling.`);
         logToDiscord(`Attempted to schedule past reminder (not scheduled): "${reminder.text}" for ${new Date(reminder.dateTime).toLocaleString()}`, 'warning');
-        chrome.alarms.clear(CUSTOM_REMINDER_ALARM_PREFIX + reminder.id); // Ensure any old alarm is cleared
-        removePastOrInvalidReminderFromStorage(reminder.id); // Remove it from storage
+        chrome.alarms.clear(CUSTOM_REMINDER_ALARM_PREFIX + reminder.id); 
+        removePastOrInvalidReminderFromStorage(reminder.id); 
         return;
     }
 
     chrome.alarms.create(CUSTOM_REMINDER_ALARM_PREFIX + reminder.id, {
         when: scheduleTime
     });
-    console.log(`Custom reminder "${reminder.text}" (ID: ${reminder.id}) scheduled for: ${new Date(scheduleTime).toLocaleString()} with alarm name: ${CUSTOM_REMINDER_ALARM_PREFIX + reminder.id}`);
+    console.log(`Custom reminder "${reminder.text}" (ID: ${reminder.id}) scheduled for: ${new Date(scheduleTime).toLocaleString()}`);
     logToDiscord(`Reminder scheduled: "${reminder.text}" for ${new Date(scheduleTime).toLocaleString()}`, 'success');
 }
 
@@ -127,9 +147,7 @@ function cancelSpecificCustomReminder(reminderId) {
     chrome.alarms.clear(alarmName, (wasCleared) => {
         if (wasCleared) {
             console.log(`Cancelled alarm: ${alarmName}`);
-            // Logging for cancellation is now handled in the onMessage listener for better context
         } else {
-            // It's possible the alarm already fired and was cleared, or was never set due to being in the past.
             console.log(`No alarm found to cancel (or already cleared) with name: ${alarmName}`);
         }
     });
@@ -138,7 +156,7 @@ function cancelSpecificCustomReminder(reminderId) {
 async function rescheduleAllCustomReminders() {
     try {
         const result = await new Promise(resolve => chrome.storage.local.get({ customReminders: [] }, resolve));
-        let remindersToKeep = []; // Trackers for what's actually kept after this process
+        let remindersToKeep = []; 
         let madeStorageChanges = false;
 
         if (result.customReminders && result.customReminders.length > 0) {
@@ -146,18 +164,14 @@ async function rescheduleAllCustomReminders() {
             for (const reminder of result.customReminders) {
                 if (reminder.dateTime) {
                     const reminderTimeMs = new Date(reminder.dateTime).getTime();
-                    if (reminderTimeMs > (Date.now() - 60000)) { // Check if it's in the future (with 1 min grace)
-                        scheduleSpecificCustomReminder(reminder); // This function already checks if it's past
-                        remindersToKeep.push(reminder); // Keep it if scheduled or still future
+                    if (reminderTimeMs > (Date.now() - 60000)) { 
+                        scheduleSpecificCustomReminder(reminder); 
+                        remindersToKeep.push(reminder); 
                     } else {
                         console.log(`During reschedule: Reminder "${reminder.text}" (ID: ${reminder.id}) at ${new Date(reminder.dateTime).toLocaleString()} is past. Clearing.`);
                         logToDiscord(`Reschedule: Found past reminder "${reminder.text}". Clearing.`, 'warning');
-                        cancelSpecificCustomReminder(reminder.id); // Ensure alarm is cleared
-                        // The actual removal from storage will happen if scheduleSpecificCustomReminder is called
-                        // or if we explicitly call removePastOrInvalidReminderFromStorage here.
-                        // For now, scheduleSpecificCustomReminder handles its own removal logic if it determines it's past.
-                        // We just need to ensure we don't keep it in remindersToKeep if it's past.
-                        madeStorageChanges = true; // Indicate a potential change to storage
+                        cancelSpecificCustomReminder(reminder.id); 
+                        madeStorageChanges = true; 
                     }
                 } else {
                      console.warn(`During reschedule: Reminder (ID: ${reminder.id}) missing dateTime. Will be removed.`);
@@ -166,14 +180,11 @@ async function rescheduleAllCustomReminders() {
                      madeStorageChanges = true;
                 }
             }
-             // If madeChanges implies some reminders were filtered out *before* calling scheduleSpecificCustomReminder
-             // (e.g. due to missing dateTime), we need to update storage.
             if (madeStorageChanges && result.customReminders.length !== remindersToKeep.length) {
                 await new Promise(resolve => chrome.storage.local.set({ customReminders: remindersToKeep }, resolve));
-                console.log("Storage updated after rescheduling, removed past/invalid reminders not caught by scheduleSpecificCustomReminder.");
+                console.log("Storage updated after rescheduling, removed past/invalid reminders.");
                 chrome.runtime.sendMessage({ action: "refreshReminders" }).catch(e => console.log("Popup not open or error sending refresh message:", e.message || e));
             }
-
         } else {
             console.log("No custom reminders to reschedule.");
         }
@@ -234,6 +245,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
                     const greetingMessage = `Hey ${result.userProfile.name}, Good morning! Have a great day.`;
                     speakInBackground(greetingMessage); 
                     logToDiscord(`10 AM Greeting delivered to ${result.userProfile.name}.`, 'info');
+                    // No system notification or custom toast for this greeting, only spoken.
                 }
             });
         }
@@ -244,9 +256,12 @@ chrome.alarms.onAlarm.addListener((alarm) => {
                 const today = new Date();
                 if (dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate()) {
                     const birthdayMessage = `Happy Birthday, ${result.userProfile.name}! Hope you have a wonderful day!`;
-                    chrome.notifications.create(`birthdayNotif-${Date.now()}`, {
+                    const notificationId = `birthdayNotif-${Date.now()}`;
+                    chrome.notifications.create(notificationId, {
                         type: 'basic', iconUrl: 'icons/icon128.png',
                         title: 'Happy Birthday!', message: `Happy Birthday, ${result.userProfile.name}!`, priority: 2
+                    }, () => {
+                        displayCustomToastInActiveTab(`🎂 Happy Birthday, ${result.userProfile.name}!`);
                     });
                     speakInBackground(birthdayMessage);
                     logToDiscord(`Birthday greeting delivered to ${result.userProfile.name}.`, 'success');
@@ -262,17 +277,21 @@ chrome.alarms.onAlarm.addListener((alarm) => {
                 console.log(`Custom reminder triggered: ${reminder.text} at ${reminderTime}`);
                 logToDiscord(`Reminder Fired: "${reminder.text}" (Scheduled for: ${reminderTime})`, 'success');
                 
-                chrome.notifications.create(`customNotif-${reminder.id}-${Date.now()}`, {
+                const notificationId = `customNotif-${reminder.id}-${Date.now()}`;
+                chrome.notifications.create(notificationId, {
                     type: 'basic',
                     iconUrl: 'icons/icon128.png',
                     title: 'Reminder!',
                     message: reminder.text,
                     priority: 2,
+                }, () => {
+                    // Display custom toast after system notification is created
+                    displayCustomToastInActiveTab(`Reminder: ${reminder.text}`);
                 });
                 speakInBackground(`Reminder: ${reminder.text}`);
                 removePastOrInvalidReminderFromStorage(reminder.id); 
             } else {
-                console.warn("Fired alarm for a custom reminder not found in storage (might have been deleted):", alarm.name);
+                console.warn("Fired alarm for a custom reminder not found in storage:", alarm.name);
                 logToDiscord(`Fired alarm for missing reminder ID: ${reminderId}`, 'warning');
             }
         });

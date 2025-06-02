@@ -66,7 +66,42 @@
                         <button id="addTodoButton" class="btn btn-primary">Add Task</button>
                     </div>
                 </div>
-                <div id="todoList" class="todo-list-container"></div>
+                <div id="todoList" class="todo-list-container">
+                    <!-- Example structure for a to-do item with sub-tasks:
+                    <div class="todo-item" data-todo-id="123">
+                        <div class="main-task-controls">
+                            <span class="todo-text">Main Task Text</span>
+                            <div class="todo-item-actions">
+                                <button class="complete-btn" title="Mark as Complete">
+                                    <svg>...</svg> 
+                                </button>
+                                <button class="add-subtask-btn" title="Add Sub-task">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 subtask-icon">
+                                        <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                                    </svg>
+                                </button>
+                                <button class="delete-btn" title="Delete Task">
+                                    <svg>...</svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="subtask-section hidden"> <!- Initially hidden, shown on click ->
+                            <div class="subtask-list">
+                                <!- Sub-tasks will be listed here ->
+                                <div class="subtask-item" data-subtask-id="123.1">
+                                    <input type="checkbox" class="subtask-checkbox">
+                                    <span class="subtask-text">Sub-task 1</span>
+                                    <button class="delete-subtask-btn" title="Delete Sub-task">&times;</button>
+                                </div>
+                            </div>
+                            <div class="input-group subtask-input-group">
+                                <input type="text" class="input-field input-sm subtask-input" placeholder="New sub-task">
+                                <button class="btn btn-secondary btn-sm add-new-subtask-btn">Add</button>
+                            </div>
+                        </div>
+                    </div>
+                    -->
+                </div>
                 <button id="clearAllTodosButton" class="btn btn-danger full-width hidden">Clear All To-dos</button>
             </div>
 
@@ -121,7 +156,8 @@
                          <input type="url" id="discordWebhookUrlInput" class="input-field" placeholder="Enter your Discord webhook URL">
                          <p class="info-text">For sending extension logs to a Discord channel.</p>
                     </div>
-                    <button id="updateVoiceSettingsButton" class="btn btn-secondary">Update Settings</button> <p id="settingsStatus" class="status-text-small"></p>
+                    <button id="updateVoiceSettingsButton" class="btn btn-secondary">Update Settings</button> 
+                    <p id="settingsStatus" class="status-text-small"></p>
                 </div>
             </div>
         </div>

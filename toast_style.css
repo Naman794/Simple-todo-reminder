@@ -1,0 +1,64 @@
+/* toast_style.css */
+
+/* Container for all toasts, fixed at the bottom of the screen */
+.custom-toast-container {
+    position: fixed;
+    bottom: 20px; /* Adjust as needed */
+    right: 20px;  /* Adjust for desktop, will be centered on mobile */
+    z-index: 99999; /* Ensure it's on top of most page content */
+    display: flex;
+    flex-direction: column-reverse; /* New toasts appear above older ones */
+    align-items: flex-end; /* Align toasts to the right for desktop */
+    gap: 10px; /* Space between stacked toasts */
+    pointer-events: none; /* Container itself shouldn't block clicks */
+}
+
+/* Individual toast notification styling */
+.custom-toast-notification {
+    background-color: rgba(45, 55, 72, 0.9); /* Tailwind gray-800 with 90% opacity */
+    color: #ffffff; /* White text */
+    padding: 12px 18px;
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+    font-family: 'Inter', sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    font-size: 14px;
+    line-height: 1.5;
+    min-width: 250px; /* Minimum width */
+    max-width: 350px; /* Maximum width */
+    opacity: 0;
+    transform: translateY(100%); /* Start off-screen below */
+    transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+    pointer-events: auto; /* Toasts themselves can be interacted with if needed */
+    margin-top: 10px; /* Ensures space when stacking from bottom up (flex-direction-reverse) */
+}
+
+/* State for when the toast is visible */
+.custom-toast-notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* State for when the toast is about to hide (for fade-out effect) */
+.custom-toast-notification.hide {
+    opacity: 0;
+    /* transform: translateY(20px); Optional: slight downward movement on hide */
+}
+
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 600px) {
+    .custom-toast-container {
+        right: 10px;
+        left: 10px;
+        bottom: 10px;
+        align-items: center; /* Center toasts on mobile */
+    }
+
+    .custom-toast-notification {
+        width: calc(100% - 20px); /* Full width minus some padding */
+        max-width: none;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: center;
+    }
+}
