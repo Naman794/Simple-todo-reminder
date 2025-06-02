@@ -1,18 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Daily Voice Reminder & YT Stats",
+  "name": "Daily Voice Reminder",
   "version": "1.4",
-  "description": "A Chrome extension for to-dos, custom reminders with voice, YouTube channel stats, and Discord logging with custom toast notifications.",
+  "description": "A Chrome extension for to-dos, custom reminders with voice, Discord logging, and in-page toast notifications.",
   "permissions": [
     "storage",
     "alarms",
     "notifications",
-    "tts",
-    "activeTab",
-    "scripting"
+    "tts"
   ],
   "host_permissions": [
-    "https://www.googleapis.com/",
     "https://discord.com/"
   ],
   "action": {
@@ -34,12 +31,6 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/*"],
-      "js": ["content_yt.js"],
-      "css": [],
-      "run_at": "document_idle"
-    },
-    {
       "matches": ["<all_urls>"],
       "js": ["toast_injector.js"],
       "css": ["toast_style.css"],
@@ -53,6 +44,6 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.googleapis.com/ https://discord.com/; object-src 'self';"
+    "extension_pages": "script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://discord.com/; object-src 'self';"
   }
 }
