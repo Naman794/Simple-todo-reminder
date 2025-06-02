@@ -56,6 +56,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const dismissBottomTodoBannerBtn = document.getElementById('dismissBottomTodoBannerBtn');
     // const actionFeedbackPopup = document.getElementById('actionFeedbackPopup'); // REMOVED
     // const actionFeedbackText = document.getElementById('actionFeedbackText');   // REMOVED
+
+    const voiceGreetingWrapper = document.getElementById('voiceGreetingWrapper');
+    const spokenReminderWrapper = document.getElementById('spokenReminderWrapper');
+
+    // Toggle enableVoiceGreeting checkbox when the wrapper is clicked
+    if (voiceGreetingWrapper && enableVoiceGreeting) {
+        voiceGreetingWrapper.addEventListener('click', (e) => {
+            if (e.target !== enableVoiceGreeting) {
+                enableVoiceGreeting.checked = !enableVoiceGreeting.checked;
+            }
+        });
+    }
+
+    // Toggle enableSpokenReminders checkbox when the wrapper is clicked
+    if (spokenReminderWrapper && enableSpokenReminders) {
+        spokenReminderWrapper.addEventListener('click', (e) => {
+            if (e.target !== enableSpokenReminders) {
+                enableSpokenReminders.checked = !enableSpokenReminders.checked;
+            }
+        });
+    }
     
     // let feedbackTimeout = null; // REMOVED for internal popup
     let ttsVoices = []; 
@@ -118,17 +139,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function showActionFeedback(message, type = 'success') {
         // Send message to background to show an on-page toast
         // The duration parameter is removed as on-page toasts have their own fixed duration.
-        chrome.runtime.sendMessage({ 
-            action: "showOnPageToast", 
-            toastMessage: message, 
-            toastType: type 
-        }, response => {
-            if (chrome.runtime.lastError) {
-                console.error("Error sending showOnPageToast message from popup.js:", chrome.runtime.lastError.message);
-                // Fallback: console log if messaging fails, as the visual popup is gone
-                console.log(`Action Feedback (popup.js - ${type}): ${message}`);
-            } else if (response && response.status) {
-                // console.log("Background response for showOnPageToast:", response.status);
+        chrome.runtime.sendMessage({
+        action: "showOnPageToast",
+        toastMessage: message,
+        toastType: type
+    }, (response) => {
+        if (chrome.runtime.lastError) {
+            const msg = chrome.runtime.lastError.message;
+            if (msg.includes("The message port closed") || msg.includes("No receiving end") || msg.includes("Could not establish connection")) {
+                console.log(`[Toast fallback - ${type}]: ${message}`);
+            } else {
+                console.warn("Unexpected toast message error:", msg);
+            }
+            return;
+        }
+        if (response?.status) {
+                console.log(`[Action Feedback - ${type}]: ${message}`);
             }
         });
     }
@@ -279,52 +305,163 @@ document.addEventListener('DOMContentLoaded', () => {
     // (Full renderTodos, addTodo, deleteTodo, toggleTodoComplete, clearAllTodos functions as before, 
     // ensuring they call the new showActionFeedback for user messages)
     function renderTodos(todos = []) {
-        if (!todoListElement) return;
-        todoListElement.innerHTML = ''; 
-        if (!todos || todos.length === 0) {
-            const emptyMsg = document.createElement('p');
-            emptyMsg.textContent = 'No tasks yet. Add some to your list!';
-            emptyMsg.className = 'info-text centered-text'; 
-            todoListElement.appendChild(emptyMsg);
-            if(clearAllTodosButton) clearAllTodosButton.classList.add('hidden'); 
-        } else {
-            if(clearAllTodosButton) clearAllTodosButton.classList.remove('hidden'); 
-            todos.forEach((todo, index) => {
-                const todoItem = document.createElement('div');
-                todoItem.className = `todo-item ${todo.completed ? 'completed' : ''}`;
-                const todoText = document.createElement('span');
-                todoText.textContent = todo.text;
-                todoText.className = 'todo-text';
-                const actionsWrapper = document.createElement('div');
-                actionsWrapper.className = 'todo-item-actions';
-                const completeButton = document.createElement('button');
-                completeButton.className = `complete-btn ${todo.completed ? 'completed' : ''}`;
-                completeButton.innerHTML = todo.completed ?
-                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>' : 
-                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd" /></svg>'; 
-                completeButton.title = todo.completed ? "Mark as Incomplete" : "Mark as Complete";
-                completeButton.onclick = () => toggleTodoComplete(index);
-                const deleteButton = document.createElement('button');
-                deleteButton.className = 'delete-btn';
-                deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.177-2.365.298a.75.75 0 0 0-.53.904l.523 4.386A3.75 3.75 0 0 0 7.48 12.5H12.52a3.75 3.75 0 0 0 3.352-2.912l.523-4.386a.75.75 0 0 0-.53-.904c-.785-.12-1.57-.221-2.365-.298v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg>'; 
-                deleteButton.title = "Delete Task";
-                deleteButton.onclick = () => deleteTodo(index);
-                actionsWrapper.appendChild(completeButton);
-                actionsWrapper.appendChild(deleteButton);
-                todoItem.appendChild(todoText);
-                todoItem.appendChild(actionsWrapper);
-                todoListElement.appendChild(todoItem);
+    if (!todoListElement) return;
+    todoListElement.innerHTML = '';
+
+    if (!todos || todos.length === 0) {
+        const emptyMsg = document.createElement('p');
+        emptyMsg.textContent = 'No tasks yet. Add some to your list!';
+        emptyMsg.className = 'info-text centered-text';
+        todoListElement.appendChild(emptyMsg);
+        if (clearAllTodosButton) clearAllTodosButton.classList.add('hidden');
+    } else {
+        if (clearAllTodosButton) clearAllTodosButton.classList.remove('hidden');
+
+        todos.forEach((todo, index) => {
+            const todoItem = document.createElement('div');
+            todoItem.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+
+            const mainTaskArea = document.createElement('div');
+            mainTaskArea.className = 'main-task-area';
+
+            const todoText = document.createElement('span');
+            todoText.textContent = todo.text;
+            todoText.className = 'todo-text';
+
+            const actionsWrapper = document.createElement('div');
+            actionsWrapper.className = 'todo-item-actions';
+
+            const completeButton = document.createElement('button');
+            completeButton.className = `complete-btn ${todo.completed ? 'completed' : ''}`;
+            completeButton.innerHTML = todo.completed
+                ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd" /></svg>';
+
+            completeButton.title = todo.completed ? "Mark as Incomplete" : "Mark as Complete";
+            completeButton.onclick = () => toggleTodoComplete(index);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-btn';
+            deleteButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.177-2.365.298a.75.75 0 0 0-.53.904l.523 4.386A3.75 3.75 0 0 0 7.48 12.5H12.52a3.75 3.75 0 0 0 3.352-2.912l.523-4.386a.75.75 0 0 0-.53-.904c-.785-.12-1.57-.221-2.365-.298v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg>';
+            deleteButton.title = "Delete Task";
+            deleteButton.onclick = () => deleteTodo(index);
+
+            actionsWrapper.appendChild(completeButton);
+            actionsWrapper.appendChild(deleteButton);
+
+            mainTaskArea.appendChild(todoText);
+            mainTaskArea.appendChild(actionsWrapper);
+            todoItem.appendChild(mainTaskArea);
+
+            // --- Subtasks Rendering Section ---
+            const subtaskSection = document.createElement('div');
+            subtaskSection.className = 'subtask-section';
+
+            const subtaskList = document.createElement('div');
+            subtaskList.className = 'subtask-list';
+
+            (todo.subtasks || []).forEach((subtask, subIndex) => {
+                const subtaskItem = document.createElement('div');
+                subtaskItem.className = 'subtask-item';
+
+                const subCheckbox = document.createElement('input');
+                subCheckbox.type = 'checkbox';
+                subCheckbox.className = 'subtask-checkbox';
+                subCheckbox.checked = subtask.completed;
+                subCheckbox.onchange = () => toggleSubtask(index, subIndex);
+
+                const subText = document.createElement('span');
+                subText.className = 'subtask-text';
+                subText.textContent = subtask.text;
+
+                const deleteSubBtn = document.createElement('button');
+                deleteSubBtn.className = 'delete-subtask-btn';
+                deleteSubBtn.innerHTML = '&times;';
+                deleteSubBtn.title = "Delete Subtask";
+                deleteSubBtn.onclick = () => deleteSubtask(index, subIndex);
+
+                subtaskItem.appendChild(subCheckbox);
+                subtaskItem.appendChild(subText);
+                subtaskItem.appendChild(deleteSubBtn);
+                subtaskList.appendChild(subtaskItem);
             });
-        }
-        updateBottomTodoBanner(todos); 
+
+            subtaskSection.appendChild(subtaskList);
+
+            // Input to add a subtask
+            const subtaskInputWrapper = document.createElement('div');
+            subtaskInputWrapper.className = 'subtask-input-group';
+
+            const subtaskInput = document.createElement('input');
+            subtaskInput.type = 'text';
+            subtaskInput.placeholder = 'Add a subtask...';
+            subtaskInput.className = 'input-field subtask-input';
+
+            subtaskInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addSubtask(index, subtaskInput.value.trim());
+                    subtaskInput.value = '';
+                }
+            });
+
+            subtaskInputWrapper.appendChild(subtaskInput);
+            subtaskSection.appendChild(subtaskInputWrapper);
+
+            todoItem.appendChild(subtaskSection);
+            todoListElement.appendChild(todoItem);
+        });
     }
+
+    updateBottomTodoBanner(todos);
+}
+
+    function addSubtask(todoIndex, text) {
+    if (!text) return;
+    chrome.storage.local.get({ todos: [] }, (result) => {
+        const todos = result.todos;
+        todos[todoIndex].subtasks = todos[todoIndex].subtasks || [];
+        todos[todoIndex].subtasks.push({ text, completed: false });
+        chrome.storage.local.set({ todos }, () => {
+            renderTodos(todos);
+            showActionFeedback('Subtask added!', 'success');
+        });
+    });
+}
+
+function toggleSubtask(todoIndex, subIndex) {
+    chrome.storage.local.get({ todos: [] }, (result) => {
+        const todos = result.todos;
+        todos[todoIndex].subtasks[subIndex].completed = !todos[todoIndex].subtasks[subIndex].completed;
+        chrome.storage.local.set({ todos }, () => {
+            renderTodos(todos);
+        });
+    });
+}
+
+function deleteSubtask(todoIndex, subIndex) {
+    chrome.storage.local.get({ todos: [] }, (result) => {
+        const todos = result.todos;
+        todos[todoIndex].subtasks.splice(subIndex, 1);
+        chrome.storage.local.set({ todos }, () => {
+            renderTodos(todos);
+            showActionFeedback('Subtask deleted.', 'success');
+        });
+    });
+}
+
+
 
     function addTodo() { 
         if(!todoInput) return;
         const text = todoInput.value.trim();
         if (!text) { showActionFeedback('To-do task cannot be empty.', 'error'); return; }
         chrome.storage.local.get({ todos: [] }, (result) => {
-            const newTodos = [...result.todos, { text: text, completed: false, id: Date.now() }];
+            const newTodos = [...result.todos, {
+                text: text,
+                completed: false,
+                id: Date.now(),
+                subtasks: [] // 👈 This adds the subtask array to every new task
+                }];
             chrome.storage.local.set({ todos: newTodos }, () => {
                 renderTodos(newTodos);
                 todoInput.value = ''; 

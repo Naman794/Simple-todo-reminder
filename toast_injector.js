@@ -1,16 +1,18 @@
 // toast_injector.js
 
 let toastContainer = null;
-const TOAST_DISMISS_DELAY = 4000; // 4 seconds, can be adjusted (3-5 seconds as requested)
-const TOAST_ANIMATION_DURATION = 400; // Matches CSS transition duration
+const TOAST_DISMISS_DELAY = 4000;
+const TOAST_ANIMATION_DURATION = 400;
+
+console.log("[ToastInjector] Content script loaded");
 
 function createToastContainer() {
-    if (document.getElementById('custom-toast-container-ext')) {
-        return document.getElementById('custom-toast-container-ext');
-    }
+    let existing = document.getElementById('custom-toast-container-ext');
+    if (existing) return existing;
+
     const container = document.createElement('div');
     container.id = 'custom-toast-container-ext';
-    container.className = 'custom-toast-container'; // From toast_style.css
+    container.className = 'custom-toast-container';
     document.body.appendChild(container);
     return container;
 }
@@ -21,55 +23,38 @@ function showToast(message) {
     }
 
     const toast = document.createElement('div');
-    toast.className = 'custom-toast-notification'; // From toast_style.css
+    toast.className = 'custom-toast-notification';
     toast.textContent = message;
 
-    // Prepend so new toasts appear at the "end" of the flex-direction: column-reverse container
-    // which visually means they appear at the bottom and push older ones up.
     if (toastContainer.firstChild) {
         toastContainer.insertBefore(toast, toastContainer.firstChild);
     } else {
         toastContainer.appendChild(toast);
     }
-    
 
-    // Trigger the slide-in animation
-    // We need a slight delay to allow the element to be added to the DOM before adding the 'show' class
     requestAnimationFrame(() => {
-        setTimeout(() => { // Further delay to ensure transition is picked up
+        setTimeout(() => {
             toast.classList.add('show');
-        }, 20); 
+        }, 20);
     });
 
-    // Auto-dismiss
     setTimeout(() => {
         toast.classList.remove('show');
-        toast.classList.add('hide'); // Trigger hide animation
+        toast.classList.add('hide');
 
-        // Remove the toast from DOM after the hide animation completes
         setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-            // If container is empty, we could remove it, but it's fine to leave it.
-            // if (toastContainer && !toastContainer.hasChildNodes()) {
-            //     toastContainer.remove();
-            //     toastContainer = null;
-            // }
+            toast.remove();
         }, TOAST_ANIMATION_DURATION);
     }, TOAST_DISMISS_DELAY);
 }
 
-// Listen for messages from the background script
+// ✅ This is crucial: listener must return true for async responses
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log("[ToastInjector] Received message:", request);
+
     if (request.action === "showCustomToast" && request.message) {
         showToast(request.message);
-        sendResponse({ status: "Toast displayed or queued by content script" });
+        sendResponse({ status: "Toast shown" });
     }
-    return true; // Keep message channel open for asynchronous response if needed
+    return true;
 });
-
-// Initialize the container on script load if preferred,
-// or create it on demand as done in showToast.
-// toastContainer = createToastContainer(); 
-// console.log("Toast Injector Content Script Loaded.");

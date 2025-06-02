@@ -1,13 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Daily Voice Reminder",
-  "version": "1.4",
+  "version": "1.7",
   "description": "A Chrome extension for to-dos, custom reminders with voice, Discord logging, and in-page toast notifications.",
   "permissions": [
     "storage",
     "alarms",
     "notifications",
-    "tts"
+    "tts",
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://discord.com/"
@@ -47,3 +49,4 @@
     "extension_pages": "script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://discord.com/; object-src 'self';"
   }
 }
+  
